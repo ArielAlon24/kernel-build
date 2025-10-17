@@ -22,7 +22,7 @@ RUN wget https://mirrors.edge.kernel.org/pub/linux/kernel/v2.6/linux-2.6.36.tar.
 
 WORKDIR /build/linux-2.6.36
 
-RUN make malta_defconfig && \
-    make -j$(nproc)
+COPY scripts/build_mips_le-v2.6.36.sh .
+RUN chmod +x ./build_mips_le-v2.6.36.sh
 
-CMD ["bash"]
+CMD ["./build_mips_le-v2.6.36.sh"]
