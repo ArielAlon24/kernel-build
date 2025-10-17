@@ -11,4 +11,5 @@ clean:
     rm -rf out
 
 out_dir:
+    rm -rf out
     mkdir -p out
