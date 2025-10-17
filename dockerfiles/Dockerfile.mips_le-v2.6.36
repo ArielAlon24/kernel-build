@@ -1,38 +1,32 @@
 FROM debian:stable-slim
 
-RUN dpkg --add-architecture i386 && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    wget ca-certificates xz-utils bzip2 tar curl \
-    build-essential bc git make flex bison \
-    libc6:i386 libstdc++6:i386 zlib1g:i386 \
-    libssl-dev libbz2-dev libz-dev libreadline-dev \
-    && rm -rf /var/lib/apt/lists/*
+COPY scripts/installers/install_packages.sh .
+RUN chmod +x ./install_packages.sh && ./install_packages.sh
 
 WORKDIR /opt/perl
-RUN git clone https://github.com/tokuhirom/plenv.git /root/.plenv && \
-    git clone https://github.com/tokuhirom/Perl-Build.git /root/.plenv/plugins/perl-build && \
-    echo 'export PATH="/root/.plenv/bin:$PATH"' >> /root/.bashrc && \
-    echo 'eval "$(plenv init -)"' >> /root/.bashrc && \
-    /bin/bash -lc 'plenv install 5.14.4 && plenv global 5.14.4'
-
-ENV PATH=/root/.plenv/shims:/root/.plenv/bin:$PATH
-
-WORKDIR /opt
-RUN wget -q https://archive.openwrt.org/backfire/10.03.1/brcm47xx/OpenWrt-Toolchain-brcm47xx-for-mipsel-gcc-4.3.3+cs_uClibc-0.9.30.1.tar.bz2 && \
-    tar -xf OpenWrt-Toolchain-brcm47xx-for-mipsel-gcc-4.3.3+cs_uClibc-0.9.30.1.tar.bz2 && \
-    TOOLCHAIN_DIR=$(echo OpenWrt-Toolchain-*/toolchain-mipsel_gcc-4.3.3+cs_uClibc-0.9.30.1) && \
-    ln -s "$TOOLCHAIN_DIR" /opt/toolchain
+COPY scripts/installers/install_plenv.sh .
+RUN chmod +x ./install_plenv.sh && \
+    ./install_plenv.sh 5.14.4
 
 WORKDIR /build
-RUN wget https://mirrors.edge.kernel.org/pub/linux/kernel/v2.6/linux-2.6.36.tar.xz && \
-    tar -xf linux-2.6.36.tar.xz
+COPY scripts/installers/install_linux.sh .
+RUN chmod +x install_linux.sh && \
+    ./install_linux.sh https://mirrors.edge.kernel.org/pub/linux/kernel/v2.6/linux-2.6.36.tar.xz
+
+WORKDIR /opt
+COPY scripts/installers/install_openwrt_toolchain.sh .
+RUN chmod +x ./install_openwrt_toolchain.sh && \
+    ./install_openwrt_toolchain.sh https://archive.openwrt.org/backfire/10.03.1/brcm47xx/OpenWrt-Toolchain-brcm47xx-for-mipsel-gcc-4.3.3+cs_uClibc-0.9.30.1.tar.bz2
 
 WORKDIR /build/linux-2.6.36
-
 ENV CROSS_COMPILE=/opt/toolchain/usr/bin/mipsel-openwrt-linux- \
-    ARCH=mips
+    ARCH=mips \
+    PATH=/root/.plenv/shims:/root/.plenv/bin:$PATH
 
-COPY scripts/build_mips_le-v2.6.36.sh .
-RUN chmod +x ./build_mips_le-v2.6.36.sh
+COPY scripts/collect_kernel_artifacts.sh .
+RUN chmod +x ./collect_kernel_artifacts.sh
 
-CMD ["./build_mips_le-v2.6.36.sh"]
+COPY scripts/build_mips-v2.6.36.sh .
+RUN chmod +x ./build_mips-v2.6.36.sh
+
+CMD ["sh", "-c", "./build_mips-v2.6.36.sh && ./collect_kernel_artifacts.sh"]
