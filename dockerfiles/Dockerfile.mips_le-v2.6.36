@@ -11,16 +11,15 @@ RUN wget -q https://archive.openwrt.org/backfire/10.03.1/brcm47xx/OpenWrt-Toolch
     TOOLCHAIN_DIR=$(echo OpenWrt-Toolchain-*/toolchain-mipsel_gcc-4.3.3+cs_uClibc-0.9.30.1) && \
     ln -s "$TOOLCHAIN_DIR" /opt/toolchain
 
-ENV PATH=/opt/toolchain/usr/bin:$PATH \
-    CROSS_COMPILE=mipsel-openwrt-linux- \
-    ARCH=mips
-
 WORKDIR /build
 
 RUN wget https://mirrors.edge.kernel.org/pub/linux/kernel/v2.6/linux-2.6.36.tar.xz && \
     tar -xf linux-2.6.36.tar.xz
 
 WORKDIR /build/linux-2.6.36
+
+ENV PATH=/opt/toolchain/usr/mipsel-openwrt-linux/bin:$PATH \
+    ARCH=mips
 
 COPY scripts/build_mips_le-v2.6.36.sh .
 RUN chmod +x ./build_mips_le-v2.6.36.sh
