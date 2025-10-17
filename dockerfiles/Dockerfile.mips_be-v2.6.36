@@ -1,0 +1,32 @@
+FROM debian:stable-slim
+
+COPY scripts/installers/install_packages.sh .
+RUN chmod +x ./install_packages.sh && ./install_packages.sh
+
+WORKDIR /opt/perl
+COPY scripts/installers/install_plenv.sh .
+RUN chmod +x ./install_plenv.sh && \
+    ./install_plenv.sh 5.14.4
+
+WORKDIR /build
+COPY scripts/installers/install_linux.sh .
+RUN chmod +x install_linux.sh && \
+    ./install_linux.sh https://mirrors.edge.kernel.org/pub/linux/kernel/v2.6/linux-2.6.36.tar.xz
+
+WORKDIR /opt
+COPY scripts/installers/install_openwrt_toolchain.sh .
+RUN chmod +x ./install_openwrt_toolchain.sh && \
+    ./install_openwrt_toolchain.sh https://archive.openwrt.org/backfire/10.03.1/adm5120_router_be/OpenWrt-Toolchain-adm5120-for-mips-gcc-4.3.3+cs_uClibc-0.9.30.1.tar.bz2
+
+WORKDIR /build/linux-2.6.36
+ENV CROSS_COMPILE=/opt/toolchain/usr/bin/mips-openwrt-linux- \
+    ARCH=mips \
+    PATH=/root/.plenv/shims:/root/.plenv/bin:$PATH
+
+COPY scripts/collect_kernel_artifacts.sh .
+RUN chmod +x ./collect_kernel_artifacts.sh
+
+COPY scripts/build_mips-v2.6.36.sh .
+RUN chmod +x ./build_mips-v2.6.36.sh
+
+CMD ["sh", "-c", "./build_mips-v2.6.36.sh && ./collect_kernel_artifacts.sh"]
