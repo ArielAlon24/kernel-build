@@ -1,0 +1,28 @@
+FROM debian:stable-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget ca-certificates xz-utils bzip2 tar build-essential bc git make flex bison \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+
+RUN wget -q https://archive.openwrt.org/backfire/10.03.1/brcm47xx/OpenWrt-Toolchain-brcm47xx-for-mipsel-gcc-4.3.3+cs_uClibc-0.9.30.1.tar.bz2 && \
+    tar -xf OpenWrt-Toolchain-brcm47xx-for-mipsel-gcc-4.3.3+cs_uClibc-0.9.30.1.tar.bz2 && \
+    TOOLCHAIN_DIR=$(echo OpenWrt-Toolchain-*/toolchain-mipsel_gcc-4.3.3+cs_uClibc-0.9.30.1) && \
+    ln -s "$TOOLCHAIN_DIR" /opt/toolchain
+
+ENV PATH=/opt/toolchain/usr/bin:$PATH \
+    CROSS_COMPILE=mipsel-openwrt-linux- \
+    ARCH=mips
+
+WORKDIR /build
+
+RUN wget https://mirrors.edge.kernel.org/pub/linux/kernel/v2.6/linux-2.6.36.tar.xz && \
+    tar -xf linux-2.6.36.tar.xz
+
+WORKDIR /build/linux-2.6.36
+
+RUN make malta_defconfig && \
+    make -j$(nproc)
+
+CMD ["bash"]
